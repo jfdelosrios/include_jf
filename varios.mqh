@@ -1704,7 +1704,7 @@ bool trailingPuntos(
 
    const double _puntosActivacion2 = _puntosActivacion * _simbolo.Point();
 
-   const double _puntosDistanca2 = _puntosDistancia * _simbolo.Point();
+   const double _puntosDistancia2 = _puntosDistancia * _simbolo.Point();
 
    CTrade _orden;
 
@@ -1755,15 +1755,17 @@ bool trailingPuntos(
          if(!((_simbolo.Bid() - positionInfo.PriceOpen()) >= _puntosActivacion2))
             continue;
 
-         _sl_propuesto = _simbolo.NormalizePrice(_simbolo.Bid() - _puntosDistanca2);
+         _sl_propuesto = _simbolo.NormalizePrice(_simbolo.Bid() - _puntosDistancia2);
 
          if((_simbolo.Bid() - _sl_propuesto) <= (_simbolo.StopsLevel() * _simbolo.Point()))
            {
 
             Print(
-               __FUNCTION__ +
-               ", (Bid() - sl) <= StopsLevel"
-            );
+              "\n(Bid - sl) <= StopsLevel, " + __FUNCTION__ +
+                  "\nBid: " + DoubleToString(_simbolo.Bid(), _simbolo.Digits()) +
+                  "\nsl: " + DoubleToString(_sl_propuesto, _simbolo.Digits()) +
+                  "\nstopLevel: " + IntegerToString(_simbolo.StopsLevel())
+                 );
 
             _salida = false;
 
@@ -1787,15 +1789,17 @@ bool trailingPuntos(
          if(!((positionInfo.PriceOpen() - _simbolo.Ask()) >= _puntosActivacion2))
             continue;
 
-         _sl_propuesto = _simbolo.NormalizePrice(_puntosDistanca2 - _simbolo.Ask());
+         _sl_propuesto = _simbolo.NormalizePrice(_simbolo.Ask() + _puntosDistancia2);
 
          if((_sl_propuesto - _simbolo.Ask()) <= (_simbolo.StopsLevel() * _simbolo.Point()))
            {
 
             Print(
-               __FUNCTION__ +
-               ", (sl - Ask) <= StopsLevel"
-            );
+              "\n(sl - Ask) <= StopsLevel, " + __FUNCTION__ +
+                  "\nsl: " + DoubleToString(_sl_propuesto, _simbolo.Digits()) +
+                  "\nAsk: " + DoubleToString(_simbolo.Ask(), _simbolo.Digits()) +
+                  "\nstopLevel: " + IntegerToString(_simbolo.StopsLevel())
+                 );
 
             _salida = false;
 
