@@ -216,7 +216,7 @@ bool tradingHabilitado(string &_mensaje)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-bool ProfitHistorico(
+bool get_ProfitHistorico(
    const posicionPropia &_posicion[],
    const datetime from_date, // desde el principio
    const datetime to_date, // hasta el momento actual
@@ -231,7 +231,7 @@ bool ProfitHistorico(
    for(int i = (ArraySize(_posicion) - 1); i >= 0; i--)
      {
 
-      if(!ProfitHistorico(
+      if(!get_ProfitHistorico(
             _posicion[i].simbolo,
             _posicion[i].magico,
             from_date, // desde el principio
@@ -252,7 +252,7 @@ bool ProfitHistorico(
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-bool ProfitHistorico(
+bool get_ProfitHistorico(
    const string _simbolo,
    const long _magico,
    const datetime from_date,         // desde el principio
@@ -642,7 +642,8 @@ bool CerrarPosicionesPositivas(
 //+------------------------------------------------------------------+
 ulong ContarPosiciones(
    const string _simbolo,
-   const ulong _magico
+   const ulong _magico,
+   const ENUM_POSITION_TYPE _tipo
 )
   {
 
@@ -692,6 +693,9 @@ ulong ContarPosiciones(
          if(positionInfo.Magic() != _magico)
             continue;
 
+         if(positionInfo.PositionType() != _tipo)
+            continue;
+
          _contPosiciones++;
 
         }
@@ -714,7 +718,8 @@ ulong ContarPosiciones(
 //+------------------------------------------------------------------+
 ulong ContarPendientes(
    const string _simbolo,
-   const ulong _magico
+   const ulong _magico,
+   const ENUM_ORDER_TYPE _tipo
 )
   {
 
@@ -763,13 +768,24 @@ ulong ContarPendientes(
          if(_orderInfo.Magic() != _magico)
             continue;
 
+         if(_orderInfo.OrderType() != _tipo)
+            continue;
+
          _contOrdenes++;
 
         }
 
       if(_salida)
         {
-         Print(IntegerToString(_contOrdenes) + " ordenes pendientes puestas.");
+
+         string _str;
+
+         Print(
+            IntegerToString(_contOrdenes) +
+            " ordenes pendientes puestas de tipo " +
+            _orderInfo.FormatType(_str, _orderInfo.OrderType())
+         );
+
          return _contOrdenes;
         }
 
@@ -783,7 +799,10 @@ ulong ContarPendientes(
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-ulong ContarPosiciones(const posicionPropia &_posicion[])
+ulong ContarPosiciones(
+   const posicionPropia &_posicion[],
+   const ENUM_POSITION_TYPE _tipo
+)
   {
 
    ulong _cantPosiciones = 0;
@@ -791,7 +810,11 @@ ulong ContarPosiciones(const posicionPropia &_posicion[])
    for(int i = (ArraySize(_posicion) - 1); i >= 0; i--)
      {
 
-      _cantPosiciones = ContarPosiciones(_posicion[i].simbolo, _posicion[i].magico);
+      _cantPosiciones = ContarPosiciones(
+                           _posicion[i].simbolo,
+                           _posicion[i].magico,
+                           _tipo
+                        );
 
      }
 
@@ -909,7 +932,10 @@ double TotalLotes(
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-ulong ContarPendientes(const posicionPropia &_posicion[])
+ulong ContarPendientes(
+   const posicionPropia &_posicion[],
+   const ENUM_ORDER_TYPE _tipo
+)
   {
 
    ulong _cantPendientes = 0;
@@ -917,7 +943,11 @@ ulong ContarPendientes(const posicionPropia &_posicion[])
    for(int i = (ArraySize(_posicion) - 1); i >= 0; i--)
      {
 
-      _cantPendientes = ContarPendientes(_posicion[i].simbolo, _posicion[i].magico);
+      _cantPendientes = ContarPendientes(
+                           _posicion[i].simbolo,
+                           _posicion[i].magico,
+                           _tipo
+                        );
 
      }
 
