@@ -891,11 +891,9 @@ double TotalLotes(
       if(_salida)
         {
 
-         /*
-                  Print(
-                     IntegerToString(_cantLotes) + " lotes para " + EnumToString(_tipoPosicion)
-                  );
-         */
+         // Print(
+         //  IntegerToString(_cantLotes) + " lotes para " + EnumToString(_tipoPosicion)
+         // );
 
          return _cantLotes;
 
@@ -1751,10 +1749,8 @@ bool trailingPuntos(
       if(positionInfo.PositionType() == POSITION_TYPE_BUY)
         {
 
-         /*
-                  if(_sl_actual >= positionInfo.PriceOpen())
-                     continue;
-                     */
+         //if(_sl_actual >= positionInfo.PriceOpen())
+         //   continue;
 
          if(!((_simbolo.Bid() - positionInfo.PriceOpen()) >= _puntosActivacion2))
             continue;
@@ -1783,10 +1779,10 @@ bool trailingPuntos(
       if(positionInfo.PositionType() == POSITION_TYPE_SELL)
         {
 
-         /*
-                  if(_sl_actual <= positionInfo.PriceOpen())
-                     continue;
-         */
+
+         //      if(_sl_actual <= positionInfo.PriceOpen())
+         //         continue;
+
 
          if(!((positionInfo.PriceOpen() - _simbolo.Ask()) >= _puntosActivacion2))
             continue;
