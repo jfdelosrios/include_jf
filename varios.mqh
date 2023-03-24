@@ -783,7 +783,7 @@ ulong ContarPendientes(
          Print(
             IntegerToString(_contOrdenes) +
             " ordenes pendientes puestas de tipo " +
-            _orderInfo.FormatType(_str, _orderInfo.OrderType())
+            _orderInfo.FormatType(_str, _tipo) + ".\n"
          );
 
          return _contOrdenes;
@@ -1310,11 +1310,17 @@ bool CerrarPosiciones(
    _orden.LogLevel(LOG_LEVEL_ALL);
    _orden.SetTypeFillingBySymbol(_simbolo);
    _orden.SetExpertMagicNumber(_magico);
+   
+   string _str;
 
    while(true)
      {
 
-      Print("\nVoy a intentar cerrar posiciones.");
+      Print(
+         "\nVoy a intentar cerrar posiciones " +
+         positionInfo.FormatType(_str, _tipo) +
+         "."
+      );
 
       _salida = true;
 
@@ -1410,7 +1416,13 @@ bool CerrarPosiciones(
 
       if(_salida)
         {
-         Print("Pude cerrar todas las posiciones.");
+
+         Print(
+            "Pude cerrar todas las posiciones " +
+            positionInfo.FormatType(_str, _tipo) +
+            "."
+         );
+
          return true;
         }
 
@@ -1797,11 +1809,11 @@ bool trailingPuntos(
            {
 
             Print(
-              "\n(Bid - sl) <= StopsLevel, " + __FUNCTION__ +
-                  "\nBid: " + DoubleToString(_simbolo.Bid(), _simbolo.Digits()) +
-                  "\nsl: " + DoubleToString(_sl_propuesto, _simbolo.Digits()) +
-                  "\nstopLevel: " + IntegerToString(_simbolo.StopsLevel())
-                 );
+               "\n(Bid - sl) <= StopsLevel, " + __FUNCTION__ +
+               "\nBid: " + DoubleToString(_simbolo.Bid(), _simbolo.Digits()) +
+               "\nsl: " + DoubleToString(_sl_propuesto, _simbolo.Digits()) +
+               "\nstopLevel: " + IntegerToString(_simbolo.StopsLevel())
+            );
 
             _salida = false;
 
@@ -1831,11 +1843,11 @@ bool trailingPuntos(
            {
 
             Print(
-              "\n(sl - Ask) <= StopsLevel, " + __FUNCTION__ +
-                  "\nsl: " + DoubleToString(_sl_propuesto, _simbolo.Digits()) +
-                  "\nAsk: " + DoubleToString(_simbolo.Ask(), _simbolo.Digits()) +
-                  "\nstopLevel: " + IntegerToString(_simbolo.StopsLevel())
-                 );
+               "\n(sl - Ask) <= StopsLevel, " + __FUNCTION__ +
+               "\nsl: " + DoubleToString(_sl_propuesto, _simbolo.Digits()) +
+               "\nAsk: " + DoubleToString(_simbolo.Ask(), _simbolo.Digits()) +
+               "\nstopLevel: " + IntegerToString(_simbolo.StopsLevel())
+            );
 
             _salida = false;
 
