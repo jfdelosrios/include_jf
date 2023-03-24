@@ -209,7 +209,7 @@ bool CSymbolInfo::Name(const string name)
    if(!Refresh())
      {
       m_name="";
-      //Print(__FUNCTION__+": invalid data of symbol '"+name+"'");
+      Print(__FUNCTION__+": invalid data of symbol '"+name+"'");
       return(false);
      }
 //--- succeed
