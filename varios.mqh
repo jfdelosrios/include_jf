@@ -1256,6 +1256,7 @@ double profitFlotante(const posicionPropia &_posicion[])
 //+------------------------------------------------------------------+
 bool CerrarPosiciones(
    const posicionPropia &_posicion[],
+   ENUM_POSITION_TYPE _tipo,
    const ulong _deslizamiento,
    const bool _asincronico
 )
@@ -1269,6 +1270,7 @@ bool CerrarPosiciones(
       if(!CerrarPosiciones(
             _posicion[i].simbolo,
             _posicion[i].magico,
+            _tipo,
             _deslizamiento,
             _asincronico
          ))
@@ -1289,6 +1291,7 @@ bool CerrarPosiciones(
 bool CerrarPosiciones(
    const string _simbolo,
    const ulong _magico,
+   ENUM_POSITION_TYPE _tipo,
    const ulong _deslizamiento,
    const bool _asincronico
 )
@@ -1365,6 +1368,9 @@ bool CerrarPosiciones(
             continue;
 
          if(positionInfo.Magic() != _magico)
+            continue;
+
+         if(positionInfo.PositionType() != _tipo)
             continue;
 
          if(!_orden.PositionClose(
@@ -1926,6 +1932,269 @@ bool EnviarMensaje(
       );
 
    return true;
+  }
+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool aplicarBE(
+   const string _simbolo,
+   const ulong _magico,
+   const ulong _deslizamiento,
+   const int _puntosBE,
+   const int _puntosAdicionales,
+   string& _mensaje
+)
+  {
+
+   if(_puntosBE == 0)
+      return true;
+
+   CSymbolInfo obj_simbolo;
+
+   if(!obj_simbolo.Name(_simbolo))
+     {
+      Print("!obj_simbolo.Name");
+      return false;
+     }
+
+   CPositionInfo positionInfo;
+
+   CTrade _orden;
+
+   _orden.SetExpertMagicNumber(_magico);
+   _orden.SetDeviationInPoints(_deslizamiento);
+
+   _orden.SetMarginMode();
+   _orden.SetTypeFillingBySymbol(obj_simbolo.Name());
+
+   obj_simbolo.RefreshRates();
+
+   double _sl = -1;
+
+   for(int _cont = (PositionsTotal() - 1); _cont >= 0; _cont--)
+     {
+
+      if(!positionInfo.SelectByIndex(_cont))
+         continue;
+
+      positionInfo.StoreState();
+
+      if(positionInfo.Symbol() != _simbolo)
+         continue;
+
+      if(positionInfo.Magic() != _magico)
+         continue;
+
+      if(positionInfo.PositionType() == POSITION_TYPE_SELL)
+        {
+
+         if(positionInfo.StopLoss() <= positionInfo.PriceOpen())
+            continue;
+
+         if(!(obj_simbolo.Ask() <= (positionInfo.PriceOpen() - _puntosBE * obj_simbolo.Point())))
+            continue;
+
+         _sl = obj_simbolo.NormalizePrice(positionInfo.PriceOpen() - _puntosAdicionales * obj_simbolo.Point());
+
+        }
+
+      if(positionInfo.PositionType() == POSITION_TYPE_BUY)
+        {
+
+         if(positionInfo.StopLoss() >= positionInfo.PriceOpen())
+            continue;
+
+         if(!(obj_simbolo.Bid() >= (positionInfo.PriceOpen() + _puntosBE * obj_simbolo.Point())))
+            continue;
+
+         _sl = obj_simbolo.NormalizePrice(positionInfo.PriceOpen() + _puntosAdicionales * obj_simbolo.Point());
+
+        }
+
+      if(!_orden.PositionModify(
+            positionInfo.Ticket(),
+            _sl,
+            positionInfo.TakeProfit()
+         ))
+        {
+
+         Print("!OrderModify " + IntegerToString(_LastError));
+         _orden.PrintResult();
+         _orden.PrintRequest();
+
+         ExpertRemove();
+         return false;
+
+         if(!MQLInfoInteger(MQL_TESTER))
+            ResetLastError();
+
+        }
+
+     }
+
+   return true;
+
+  }
+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool modificarPosicion(
+   const string _simbolo,
+   const ulong _magico,
+   const ulong _deslizamiento,
+   double _sl,
+   double _tp,
+   string& _mensaje
+)
+  {
+
+   CPositionInfo positionInfo;
+
+   CTrade            _orden;
+
+   _orden.SetExpertMagicNumber(_magico);
+   _orden.SetDeviationInPoints(_deslizamiento);
+   _orden.SetMarginMode();
+   _orden.SetTypeFillingBySymbol(_simbolo);
+
+   CSymbolInfo obj_simbolo;
+
+   obj_simbolo.Name(_simbolo);
+
+   obj_simbolo.RefreshRates();
+
+   _sl = obj_simbolo.NormalizePrice(_sl);
+   _tp = obj_simbolo.NormalizePrice(_tp);
+
+   for(int _cont = (PositionsTotal() - 1); _cont >= 0; _cont--)
+     {
+
+      if(!positionInfo.SelectByIndex(_cont))
+         continue;
+
+      positionInfo.StoreState();
+
+      positionInfo.StoreState();
+
+      if(positionInfo.Symbol() != _simbolo)
+         continue;
+
+      if(positionInfo.Magic() != _magico)
+         continue;
+
+      if((_sl == positionInfo.StopLoss()) && (_tp == positionInfo.TakeProfit()))
+         continue;
+
+      if(!_orden.PositionModify(
+            positionInfo.Ticket(),
+            _sl,
+            _tp
+         ))
+        {
+
+         Print("!OrderModify " + IntegerToString(_LastError));
+         _orden.PrintResult();
+         _orden.PrintRequest();
+
+         if(!MQLInfoInteger(MQL_TESTER))
+            ResetLastError();
+
+        }
+
+     }
+
+   return true;
+
+  }
+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool modificarPosicionPorComentario(
+   const string _simbolo,
+   const ulong _magico,
+   const string _comentario,
+   const ulong _deslizamiento,
+   double _sl,
+   double _tp,
+   string& _mensaje
+)
+  {
+
+   CPositionInfo positionInfo;
+
+   CTrade _orden;
+
+   _orden.SetExpertMagicNumber(_magico);
+   _orden.SetDeviationInPoints(_deslizamiento);
+   _orden.SetMarginMode();
+   _orden.SetTypeFillingBySymbol(_simbolo);
+
+   CSymbolInfo obj_simbolo;
+
+   obj_simbolo.Name(_simbolo);
+
+   _sl = obj_simbolo.NormalizePrice(_sl);
+   _tp = obj_simbolo.NormalizePrice(_tp);
+
+   for(int _cont = (PositionsTotal() - 1); _cont >= 0; _cont--)
+     {
+
+      if(!positionInfo.SelectByIndex(_cont))
+         continue;
+
+      positionInfo.StoreState();
+
+      if(positionInfo.Symbol() != _simbolo)
+         continue;
+
+      if(positionInfo.Comment() != _comentario)
+         continue;
+
+      if((_sl == positionInfo.StopLoss()) && (_tp == positionInfo.TakeProfit()))
+         continue;
+
+      if(!_orden.PositionModify(
+            positionInfo.Ticket(),
+            _sl,
+            _tp
+         ))
+        {
+
+         Print("!OrderModify " + IntegerToString(_LastError));
+         _orden.PrintResult();
+         _orden.PrintRequest();
+
+         if(!MQLInfoInteger(MQL_TESTER))
+            ResetLastError();
+
+        }
+
+     }
+
+   return true;
+
+  }
+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+datetime inicializarFechaInicio(
+   const uchar _horaInicio,
+   const uchar _minutoInicio
+)
+  {
+   MqlDateTime _fechaInicio;
+   TimeCurrent(_fechaInicio);
+   _fechaInicio.hour = _horaInicio;
+   _fechaInicio.min = _minutoInicio;
+   return StructToTime(_fechaInicio);
   }
 
 //+------------------------------------------------------------------+
