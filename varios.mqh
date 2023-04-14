@@ -216,7 +216,7 @@ bool tradingHabilitado(string &_mensaje)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-bool get_ProfitHistorico(
+bool get_BeneficioHistorico(
    const posicionPropia &_posicion[],
    const datetime from_date, // desde el principio
    const datetime to_date, // hasta el momento actual
@@ -231,7 +231,7 @@ bool get_ProfitHistorico(
    for(int i = (ArraySize(_posicion) - 1); i >= 0; i--)
      {
 
-      if(!get_ProfitHistorico(
+      if(!get_BeneficioHistorico(
             _posicion[i].simbolo,
             _posicion[i].magico,
             from_date, // desde el principio
@@ -252,7 +252,7 @@ bool get_ProfitHistorico(
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-bool get_ProfitHistorico(
+bool get_BeneficioHistorico(
    const string _simbolo,
    const long _magico,
    const datetime from_date,         // desde el principio
@@ -293,7 +293,7 @@ bool get_ProfitHistorico(
       if(DealInfo.Magic() != _magico)
          continue;
 
-      _profit += DealInfo.Profit();
+      _profit += DealInfo.Profit() + DealInfo.Swap() + DealInfo.Commission();
 
      }
 
@@ -391,14 +391,22 @@ bool breakEvenPuntos(
 
          if((_simbolo.Bid() - _sl_propuesto) <= (_simbolo.StopsLevel() * _simbolo.Point()))
            {
+            /*
+                        Print(
+                           "\n",
+                           __FUNCTION__ +
+                           "\n(Bid - sl) <= StopsLevel" +
+                           "\nBid: " + DoubleToString(_simbolo.Bid(), _simbolo.Digits()) +
+                           "\nSL propuesto: " + DoubleToString(_sl_propuesto, _simbolo.Digits()) +
 
-            Print(
-               __FUNCTION__ +
-               ", (Bid() - sl) <= StopsLevel"
-            );
+                           "\nDistancia actual: " +
+                           IntegerToString(
+                           int((_simbolo.Bid() - _sl_propuesto) / _simbolo.Point())
+                           ) +
 
-            _salida = false;
-
+                           "\nStopsLevel: " + IntegerToString(_simbolo.StopsLevel())
+                        );
+            */
             continue;
 
            }
@@ -420,14 +428,22 @@ bool breakEvenPuntos(
 
          if((_sl_propuesto - _simbolo.Ask()) <= (_simbolo.StopsLevel() * _simbolo.Point()))
            {
+            /*
+                        Print(
+                           "\n",
+                           __FUNCTION__ +
+                           "\n(sl - Ask) <= StopsLevel" +
+                           "\nAsk: " + DoubleToString(_simbolo.Ask(), _simbolo.Digits()) +
+                           "\nSL propuesto: " + DoubleToString(_sl_propuesto, _simbolo.Digits()) +
 
-            Print(
-               __FUNCTION__ +
-               ", (sl - Ask) <= StopsLevel"
-            );
+                           "\nDistancia actual: " +
+                           IntegerToString(
+                           int((_sl_propuesto - _simbolo.Ask()) / _simbolo.Point())
+                           ) +
 
-            _salida = false;
-
+                           "\nStopsLevel: " + IntegerToString(_simbolo.StopsLevel())
+                        );
+            */
             continue;
 
            }
@@ -719,7 +735,8 @@ ulong ContarPosiciones(
 ulong ContarPendientes(
    const string _simbolo,
    const ulong _magico,
-   const ENUM_ORDER_TYPE _tipo
+   const ENUM_ORDER_TYPE _tipo,
+   const bool _imprimirMensajes
 )
   {
 
@@ -734,7 +751,10 @@ ulong ContarPendientes(
 
       _contOrdenes = 0;
 
-      Print("\nVoy a intentar contar ordenes pendientes.");
+      if(_imprimirMensajes)
+        {
+         Print("\nVoy a intentar contar ordenes pendientes.");
+        }
 
       _salida = true;
 
@@ -778,18 +798,24 @@ ulong ContarPendientes(
       if(_salida)
         {
 
-         string _str;
+         if(_imprimirMensajes)
+           {
+            string _str;
 
-         Print(
-            IntegerToString(_contOrdenes) +
-            " ordenes pendientes puestas de tipo " +
-            _orderInfo.FormatType(_str, _tipo) + ".\n"
-         );
+            Print(
+               IntegerToString(_contOrdenes) +
+               " ordenes pendientes puestas de tipo " +
+               _orderInfo.FormatType(_str, _tipo) + ".\n"
+            );
+           }
 
          return _contOrdenes;
         }
 
-      Print("Error, voy a volver a intentar.");
+      if(_imprimirMensajes)
+        {
+         Print("Error, voy a volver a intentar.");
+        }
 
      }
 
@@ -934,7 +960,8 @@ double TotalLotes(
 //+------------------------------------------------------------------+
 ulong ContarPendientes(
    const posicionPropia &_posicion[],
-   const ENUM_ORDER_TYPE _tipo
+   const ENUM_ORDER_TYPE _tipo,
+   const bool _imprimirMensajes
 )
   {
 
@@ -946,7 +973,8 @@ ulong ContarPendientes(
       _cantPendientes = ContarPendientes(
                            _posicion[i].simbolo,
                            _posicion[i].magico,
-                           _tipo
+                           _tipo,
+                           _imprimirMensajes
                         );
 
      }
@@ -1233,7 +1261,7 @@ bool BuyLimit(
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-double profitFlotante(const posicionPropia &_posicion[])
+double get_BeneficioFlotante(const posicionPropia &_posicion[])
   {
 
    double _profitTotal = 0;
@@ -1241,7 +1269,7 @@ double profitFlotante(const posicionPropia &_posicion[])
    for(int i = (ArraySize(_posicion) - 1); i >= 0; i--)
      {
 
-      _profitTotal += profitFlotante(_posicion[i].simbolo, _posicion[i].magico);
+      _profitTotal += get_BeneficioFlotante(_posicion[i].simbolo, _posicion[i].magico);
 
      }
 
@@ -1310,7 +1338,7 @@ bool CerrarPosiciones(
    _orden.LogLevel(LOG_LEVEL_ALL);
    _orden.SetTypeFillingBySymbol(_simbolo);
    _orden.SetExpertMagicNumber(_magico);
-   
+
    string _str;
 
    while(true)
@@ -1585,7 +1613,7 @@ bool BorrarPendientes(
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-double profitFlotante(const string _simbolo, const long _magico)
+double get_BeneficioFlotante(const string _simbolo, const long _magico)
   {
 
    bool _salida; // Guarda si la función ha corrido bien o no.
@@ -1597,7 +1625,7 @@ double profitFlotante(const string _simbolo, const long _magico)
    while(true)
      {
 
-      //Print("Voy a intentar calcular profitFlotante...");
+      //Print("Voy a intentar calcular get_BeneficioFlotante...");
 
       _salida = true;
 
@@ -1632,7 +1660,7 @@ double profitFlotante(const string _simbolo, const long _magico)
 
          positionInfo.StoreState();
 
-         _profit += positionInfo.Profit();
+         _profit += positionInfo.Profit() + positionInfo.Swap() + positionInfo.Commission();
 
         }
 
@@ -1718,16 +1746,26 @@ string EnumTimeFrameToString(const ENUM_TIMEFRAMES _periodo)
 
    return "NULL";
   }
-  
+
 
 //+------------------------------------------------------------------+
 //| Despues de cierta cantidad de puntos se activa breakEven         |
 //+------------------------------------------------------------------+
 bool trailingPuntos(
+
+   // Sólo toca las posiciones que tengan este simbolo y este número magico
    const string _simboloString,
    const long _magico,
+
+   // Define si la función va a trabajar o no
    const bool _activado,
+
+   // Distancia de activación del trailing stop,
+   //se mide entre el precio de apertura y el precio de salida
    const int _puntosActivacion,
+
+   // Distancia maxima entre el stopLoss y el precio de salida
+   // despues de que se ha activado el trailing stop
    const int _puntosDistancia
 )
   {
@@ -1797,9 +1835,6 @@ bool trailingPuntos(
       if(positionInfo.PositionType() == POSITION_TYPE_BUY)
         {
 
-         //if(_sl_actual >= positionInfo.PriceOpen())
-         //   continue;
-
          if(!((_simbolo.Bid() - positionInfo.PriceOpen()) >= _puntosActivacion2))
             continue;
 
@@ -1828,11 +1863,6 @@ bool trailingPuntos(
 
       if(positionInfo.PositionType() == POSITION_TYPE_SELL)
         {
-
-
-         //      if(_sl_actual <= positionInfo.PriceOpen())
-         //         continue;
-
 
          if(!((positionInfo.PriceOpen() - _simbolo.Ask()) >= _puntosActivacion2))
             continue;
@@ -1894,7 +1924,7 @@ bool trailingPuntos(
    return _salida;
   }
 
-  
+
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
@@ -2207,6 +2237,164 @@ datetime inicializarFechaInicio(
    _fechaInicio.hour = _horaInicio;
    _fechaInicio.min = _minutoInicio;
    return StructToTime(_fechaInicio);
+  }
+
+
+
+
+
+//+------------------------------------------------------------------+
+//| Despues de cierta cantidad de puntos se activa breakEven         |
+//+------------------------------------------------------------------+
+bool trailing_bars(
+   const string _simboloString,
+   const long _magico,
+   const bool _activado
+)
+  {
+
+   if(!_activado)
+      return true;
+
+//Print("");
+
+   CSymbolInfo _simbolo;
+
+   if(!_simbolo.Name(_simboloString))
+      return false;
+
+   CPositionInfo positionInfo;
+
+   double _sl_propuesto = -1;
+
+   double _sl_actual = -1;
+
+   CTrade _orden;
+
+   _orden.SetExpertMagicNumber(_magico);
+   _orden.SetMarginMode();
+   _orden.SetTypeFillingBySymbol(_simbolo.Name());
+//_orden.SetDeviationInPoints(deslizamiento); // al parecer no es necesario
+   _orden.LogLevel(LOG_LEVEL_ALL);
+
+   _simbolo.RefreshRates();
+
+   for(int _cont = (PositionsTotal() - 1); _cont >= 0; _cont--)
+     {
+
+      if(!positionInfo.SelectByIndex(_cont))
+        {
+
+         Print(__FUNCTION__ + ", error "+IntegerToString(_LastError));
+
+         if(_LastError == ERR_TRADE_POSITION_NOT_FOUND)
+           {
+            ResetLastError();
+            continue;
+           }
+
+         continue;
+
+        }
+
+      positionInfo.StoreState();
+
+      if(positionInfo.Symbol() != _simbolo.Name())
+         continue;
+
+      if(positionInfo.Magic() != _magico)
+         continue;
+
+      _sl_actual = _simbolo.NormalizePrice(positionInfo.StopLoss());
+
+      if(positionInfo.PositionType() == POSITION_TYPE_BUY)
+        {
+
+         _sl_propuesto = _simbolo.NormalizePrice(
+                            iLow(
+                               _simbolo.Name(),
+                               PERIOD_CURRENT,
+                               1
+                            )
+                         );
+
+         if((_simbolo.Bid() - _sl_propuesto) <= (_simbolo.StopsLevel() * _simbolo.Point()))
+           {
+
+            Print(
+               "\n(Bid - sl) <= StopsLevel, " + __FUNCTION__ +
+               "\nBid: " + DoubleToString(_simbolo.Bid(), _simbolo.Digits()) +
+               "\nsl: " + DoubleToString(_sl_propuesto, _simbolo.Digits()) +
+               "\nstopLevel: " + IntegerToString(_simbolo.StopsLevel())
+            );
+
+            continue;
+
+           }
+
+         if(_sl_propuesto <= _sl_actual)
+            continue;
+
+        }
+
+      if(positionInfo.PositionType() == POSITION_TYPE_SELL)
+        {
+
+         _sl_propuesto = _simbolo.NormalizePrice(
+                            iHigh(
+                               _simbolo.Name(),
+                               PERIOD_CURRENT,
+                               1
+                            )
+                         );
+
+         if((_sl_propuesto - _simbolo.Ask()) <= (_simbolo.StopsLevel() * _simbolo.Point()))
+           {
+
+            Print(
+               "\n(sl - Ask) <= StopsLevel, " + __FUNCTION__ +
+               "\nsl: " + DoubleToString(_sl_propuesto, _simbolo.Digits()) +
+               "\nAsk: " + DoubleToString(_simbolo.Ask(), _simbolo.Digits()) +
+               "\nstopLevel: " + IntegerToString(_simbolo.StopsLevel())
+            );
+
+            continue;
+
+           }
+
+         if(_sl_propuesto >= _sl_actual)
+            continue;
+
+        }
+
+      if(!VerificarPreEstado(_simbolo.Name()))
+        {
+         continue;
+        }
+
+      Print("");
+      if(!_orden.PositionModify(
+            positionInfo.Ticket(),
+            _sl_propuesto,
+            positionInfo.TakeProfit()
+         ))
+        {
+         Print("!_orden.PositionModify");
+         Print("Bid: " + DoubleToString(_simbolo.Bid(), _simbolo.Digits()));
+         Print("Ask: " + DoubleToString(_simbolo.Ask(), _simbolo.Digits()));
+         Print(EnumToString(positionInfo.PositionType()));
+         Print("open: " + DoubleToString(positionInfo.PriceOpen(), _simbolo.Digits()));
+         _orden.PrintRequest();
+         _orden.PrintResult();
+        }
+
+      Print("");
+
+     }
+
+//Print("");
+
+   return true;
   }
 
 //+------------------------------------------------------------------+
