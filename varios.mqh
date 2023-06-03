@@ -2153,18 +2153,27 @@ bool modificarPosicion(
 )
   {
 
-   CPositionInfo positionInfo;
+   CSymbolInfo obj_simbolo;
 
+   if(!obj_simbolo.Name(_simbolo))
+     {
+      Print("!obj_simbolo.Name, " + __FUNCTION__);
+      return false;
+     }
+     
    CTrade            _orden;
+   
+   if(!_orden.SetTypeFillingBySymbol(obj_simbolo.Name()))
+   {
+      Print("!_orden.SetTypeFillingBySymbol, " + __FUNCTION__);
+      return false;
+   }
 
    _orden.SetExpertMagicNumber(_magico);
    _orden.SetDeviationInPoints(_deslizamiento);
    _orden.SetMarginMode();
-   _orden.SetTypeFillingBySymbol(_simbolo);
-
-   CSymbolInfo obj_simbolo;
-
-   obj_simbolo.Name(_simbolo);
+   
+   CPositionInfo positionInfo;
 
    obj_simbolo.RefreshRates();
 
@@ -2176,8 +2185,6 @@ bool modificarPosicion(
 
       if(!positionInfo.SelectByIndex(_cont))
          continue;
-
-      positionInfo.StoreState();
 
       positionInfo.StoreState();
 
