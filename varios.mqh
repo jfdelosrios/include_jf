@@ -123,7 +123,7 @@ bool detectarError(const string _funcion, const int _linea, const bool _remover)
 bool fechaVencida()
   {
 
-   const datetime _fecha = D'2023.04.01';
+   const datetime _fecha = D'2023.09.01';
 
    if(TimeCurrent() >= _fecha)
      {
@@ -131,7 +131,7 @@ bool fechaVencida()
       return true;
      }
 
-   if(TimeCurrent() >= (_fecha - 1440 * 60 * 15)) // avisa 15 dias antes
+   if(TimeCurrent() >= (_fecha - 15 * 1440/1 * 60/1)) // avisa 15 dias antes
      {
       Alert("Esta versión vence en " + TimeToString(_fecha) + ".");
      }

@@ -15,12 +15,7 @@
 //+------------------------------------------------------------------+
 class C_CicloBase
   {
-private:
-
-
-public:
-                     C_CicloBase();
-                    ~C_CicloBase();
+protected:
 
    bool              i_objetoActivado;
 
@@ -35,6 +30,11 @@ public:
    datetime          m_fechaCierre;
 
    bool              m_ObjetivoAlcanzado;
+
+
+public:
+                     C_CicloBase();
+                    ~C_CicloBase();
    
    bool              get_cicloActivado() { return m_cicloActivado; }
 
