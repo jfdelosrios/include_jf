@@ -342,7 +342,18 @@ bool breakEvenPuntos(
    CSymbolInfo _simbolo;
 
    if(!_simbolo.Name(_simboloString))
+     {
+      Print("!_simbolo.Name, " + __FUNCTION__);
       return false;
+     }
+
+   CTrade _orden;
+
+   if(!_orden.SetTypeFillingBySymbol(_simbolo.Name()))
+     {
+      Print("!_orden.SetTypeFillingBySymbol, " + __FUNCTION__);
+      return false;
+     }
 
    bool _salida = true;
 
@@ -356,11 +367,8 @@ bool breakEvenPuntos(
 
    const double _puntosAdicionales2 = _puntosAdicionales * _simbolo.Point();
 
-   CTrade _orden;
-
    _orden.SetExpertMagicNumber(_magico);
    _orden.SetMarginMode();
-   _orden.SetTypeFillingBySymbol(_simbolo.Name());
 //_orden.SetDeviationInPoints(deslizamiento); // al parecer no es necesario
    _orden.LogLevel(LOG_LEVEL_ALL);
 
@@ -551,6 +559,14 @@ bool CerrarPosicionesPositivas(
 )
   {
 
+   CTrade _orden;
+
+   if(!_orden.SetTypeFillingBySymbol(_simbolo))
+     {
+      Print("!_orden.SetTypeFillingBySymbol, " + __FUNCTION__);
+      return false;
+     }
+
    bool _salida;
 
    CPositionInfo positionInfo;
@@ -559,12 +575,10 @@ bool CerrarPosicionesPositivas(
 
    uint _cantPosiciones;
 
-   CTrade _orden;
    _orden.SetAsyncMode(_asincronico);
    _orden.SetDeviationInPoints(_deslizamiento);
    _orden.SetMarginMode();
    _orden.LogLevel(LOG_LEVEL_ALL);
-   _orden.SetTypeFillingBySymbol(_simbolo);
    _orden.SetExpertMagicNumber(_magico);
 
    while(true)
@@ -1328,18 +1342,24 @@ bool CerrarPosiciones(
 )
   {
 
+   CTrade _orden;
+
+   if(!_orden.SetTypeFillingBySymbol(_simbolo))
+     {
+      Print("!_orden.SetTypeFillingBySymbol, " + __FUNCTION__);
+      return false;
+     }
+
    bool _salida;
 
    CPositionInfo positionInfo;
 
    bool _salidaMercado;
 
-   CTrade _orden;
    _orden.SetAsyncMode(_asincronico);
    _orden.SetDeviationInPoints(_deslizamiento);
    _orden.SetMarginMode();
    _orden.LogLevel(LOG_LEVEL_ALL);
-   _orden.SetTypeFillingBySymbol(_simbolo);
    _orden.SetExpertMagicNumber(_magico);
 
    string _str;
@@ -1535,11 +1555,17 @@ bool BorrarPendientes(
      }
 
    CTrade _orden;
+
+   if(!_orden.SetTypeFillingBySymbol(_simbolo))
+     {
+      Print("!_orden.SetTypeFillingBySymbol, " + __FUNCTION__);
+      return false;
+     }
+
    _orden.SetAsyncMode(_asincronico);
    _orden.SetMarginMode();
    _orden.SetDeviationInPoints(_deslizamiento);
    _orden.LogLevel(LOG_LEVEL_ALL);
-   _orden.SetTypeFillingBySymbol(_simbolo);
    _orden.SetExpertMagicNumber(_magico);
 
    COrderInfo _orderInfo;
@@ -1837,7 +1863,18 @@ bool trailingPuntos(
    CSymbolInfo _simbolo;
 
    if(!_simbolo.Name(_simboloString))
+     {
+      Print("!_simbolo.Name, " + __FUNCTION__);
       return false;
+     }
+
+   CTrade _orden;
+
+   if(!_orden.SetTypeFillingBySymbol(_simbolo.Name()))
+     {
+      Print("!_orden.SetTypeFillingBySymbol, " + __FUNCTION__);
+      return false;
+     }
 
    bool _salida = true;
 
@@ -1851,11 +1888,8 @@ bool trailingPuntos(
 
    const double _puntosDistancia2 = _puntosDistancia * _simbolo.Point();
 
-   CTrade _orden;
-
    _orden.SetExpertMagicNumber(_magico);
    _orden.SetMarginMode();
-   _orden.SetTypeFillingBySymbol(_simbolo.Name());
 //_orden.SetDeviationInPoints(deslizamiento); // al parecer no es necesario
    _orden.LogLevel(LOG_LEVEL_ALL);
 
@@ -1999,7 +2033,6 @@ bool EnviarMensajeCelular(const string _mensaje)
       return false;
      }
 
-
    if(TerminalInfoInteger(TERMINAL_MQID) == 0)
      {
       Print("No hay presencia de MetaQuotes ID ");
@@ -2056,23 +2089,27 @@ bool aplicarBE(
 
    if(!obj_simbolo.Name(_simbolo))
      {
-      Print("!obj_simbolo.Name");
+      Print("!_simbolo.Name, " + __FUNCTION__);
+      return false;
+     }
+
+   CTrade _orden;
+
+   if(!_orden.SetTypeFillingBySymbol(obj_simbolo.Name()))
+     {
+      Print("!_orden.SetTypeFillingBySymbol, " + __FUNCTION__);
       return false;
      }
 
    CPositionInfo positionInfo;
 
-   CTrade _orden;
-
    _orden.SetExpertMagicNumber(_magico);
    _orden.SetDeviationInPoints(_deslizamiento);
-
    _orden.SetMarginMode();
-   _orden.SetTypeFillingBySymbol(obj_simbolo.Name());
-
-   obj_simbolo.RefreshRates();
 
    double _sl = -1;
+
+   obj_simbolo.RefreshRates();
 
    for(int _cont = (PositionsTotal() - 1); _cont >= 0; _cont--)
      {
@@ -2157,34 +2194,36 @@ bool modificarPosicion(
 
    if(!obj_simbolo.Name(_simbolo))
      {
-      Print("!obj_simbolo.Name, " + __FUNCTION__);
+      Print("!_simbolo.Name, " + __FUNCTION__);
       return false;
      }
-     
-   CTrade            _orden;
-   
+
+   CTrade _orden;
+
    if(!_orden.SetTypeFillingBySymbol(obj_simbolo.Name()))
-   {
+     {
       Print("!_orden.SetTypeFillingBySymbol, " + __FUNCTION__);
       return false;
-   }
+     }
+
+   CPositionInfo positionInfo;
 
    _orden.SetExpertMagicNumber(_magico);
    _orden.SetDeviationInPoints(_deslizamiento);
    _orden.SetMarginMode();
-   
-   CPositionInfo positionInfo;
-
-   obj_simbolo.RefreshRates();
 
    _sl = obj_simbolo.NormalizePrice(_sl);
    _tp = obj_simbolo.NormalizePrice(_tp);
+
+   obj_simbolo.RefreshRates();
 
    for(int _cont = (PositionsTotal() - 1); _cont >= 0; _cont--)
      {
 
       if(!positionInfo.SelectByIndex(_cont))
          continue;
+
+      positionInfo.StoreState();
 
       positionInfo.StoreState();
 
@@ -2224,7 +2263,7 @@ bool modificarPosicion(
 //|                                                                  |
 //+------------------------------------------------------------------+
 bool modificarPosicionPorComentario(
-   const string _simbolo,
+   const string _simboloString,
    const ulong _magico,
    const string _comentario,
    const ulong _deslizamiento,
@@ -2234,18 +2273,27 @@ bool modificarPosicionPorComentario(
 )
   {
 
-   CPositionInfo positionInfo;
+   CSymbolInfo obj_simbolo;
+
+   if(!obj_simbolo.Name(_simboloString))
+     {
+      Print("!_simbolo.Name, " + __FUNCTION__);
+      return false;
+     }
 
    CTrade _orden;
+
+   if(!_orden.SetTypeFillingBySymbol(obj_simbolo.Name()))
+     {
+      Print("!_orden.SetTypeFillingBySymbol, " + __FUNCTION__);
+      return false;
+     }
+
+   CPositionInfo positionInfo;
 
    _orden.SetExpertMagicNumber(_magico);
    _orden.SetDeviationInPoints(_deslizamiento);
    _orden.SetMarginMode();
-   _orden.SetTypeFillingBySymbol(_simbolo);
-
-   CSymbolInfo obj_simbolo;
-
-   obj_simbolo.Name(_simbolo);
 
    _sl = obj_simbolo.NormalizePrice(_sl);
    _tp = obj_simbolo.NormalizePrice(_tp);
@@ -2258,7 +2306,7 @@ bool modificarPosicionPorComentario(
 
       positionInfo.StoreState();
 
-      if(positionInfo.Symbol() != _simbolo)
+      if(positionInfo.Symbol() != obj_simbolo.Name())
          continue;
 
       if(positionInfo.Comment() != _comentario)
@@ -2306,9 +2354,6 @@ datetime inicializarFechaInicio(
   }
 
 
-
-
-
 //+------------------------------------------------------------------+
 //| Despues de cierta cantidad de puntos se activa breakEven         |
 //+------------------------------------------------------------------+
@@ -2330,17 +2375,22 @@ bool trailing_bars(
    if(!_simbolo.Name(_simboloString))
       return false;
 
+   CTrade _orden;
+
+   if(!_orden.SetTypeFillingBySymbol(_simbolo.Name()))
+     {
+      Print("!_orden.SetTypeFillingBySymbol, " + __FUNCTION__);
+      return false;
+     }
+
    CPositionInfo positionInfo;
 
    double _sl_propuesto = -1;
 
    double _sl_actual = -1;
 
-   CTrade _orden;
-
    _orden.SetExpertMagicNumber(_magico);
    _orden.SetMarginMode();
-   _orden.SetTypeFillingBySymbol(_simbolo.Name());
 //_orden.SetDeviationInPoints(deslizamiento); // al parecer no es necesario
    _orden.LogLevel(LOG_LEVEL_ALL);
 
@@ -2497,7 +2547,7 @@ bool ultimoCierre(
      }
 
    return true;
-   
+
   }
 
 
@@ -2951,18 +3001,24 @@ bool CerrarPosiciones(
 )
   {
 
+   CTrade _orden;
+
+   if(!_orden.SetTypeFillingBySymbol(_simbolo))
+     {
+      Print("!_orden.SetTypeFillingBySymbol, " + __FUNCTION__);
+      return false;
+     }
+
    bool _salida;
 
    CPositionInfo positionInfo;
 
    bool _salidaMercado;
 
-   CTrade _orden;
    _orden.SetAsyncMode(_asincronico);
    _orden.SetDeviationInPoints(_deslizamiento);
    _orden.SetMarginMode();
    _orden.LogLevel(LOG_LEVEL_ALL);
-   _orden.SetTypeFillingBySymbol(_simbolo);
    _orden.SetExpertMagicNumber(_magico);
 
    string _str;
