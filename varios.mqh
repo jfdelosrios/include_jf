@@ -323,8 +323,9 @@ bool get_BeneficioHistorico(
 
 //+------------------------------------------------------------------+
 //| Despues de cierta cantidad de puntos se activa breakEven         |
+//| La función no requiere deslizamiento                             |
 //+------------------------------------------------------------------+
-bool breakEvenPuntos(
+bool BreakEvenPuntos(
    const string _simboloString,
    const long _magico,
    const bool _activado,
@@ -355,7 +356,11 @@ bool breakEvenPuntos(
       return false;
      }
 
-   bool _salida = true;
+   _orden.SetExpertMagicNumber(_magico);
+   _orden.SetMarginMode();
+   _orden.LogLevel(LOG_LEVEL_ALL);
+
+   bool _salida;
 
    CPositionInfo positionInfo;
 
@@ -367,152 +372,163 @@ bool breakEvenPuntos(
 
    const double _puntosAdicionales2 = _puntosAdicionales * _simbolo.Point();
 
-   _orden.SetExpertMagicNumber(_magico);
-   _orden.SetMarginMode();
-//_orden.SetDeviationInPoints(deslizamiento); // al parecer no es necesario
-   _orden.LogLevel(LOG_LEVEL_ALL);
-
-   _simbolo.RefreshRates();
-
-   for(int _cont = (PositionsTotal() - 1); _cont >= 0; _cont--)
+   while(true)
      {
 
-      if(!positionInfo.SelectByIndex(_cont))
+      _salida = true;
+
+      for(int _cont = (PositionsTotal() - 1); _cont >= 0; _cont--)
         {
 
-         Print(__FUNCTION__ + ", error "+IntegerToString(_LastError));
-
-         if(_LastError == ERR_TRADE_POSITION_NOT_FOUND)
+         if(!positionInfo.SelectByIndex(_cont))
            {
-            ResetLastError();
-            continue;
-           }
 
-         _salida = false;
+            if(_LastError == ERR_TRADE_POSITION_NOT_FOUND)
+              {
+               ResetLastError();
+              }
+            else
+              {
+               Print(__FUNCTION__ + ", error "+IntegerToString(_LastError));
+              }
 
-         continue;
+            _salida = false;
 
-        }
-
-      positionInfo.StoreState();
-
-      if(positionInfo.Symbol() != _simbolo.Name())
-         continue;
-
-      if(positionInfo.Magic() != _magico)
-         continue;
-
-      _sl_actual = _simbolo.NormalizePrice(positionInfo.StopLoss());
-
-      if(positionInfo.PositionType() == POSITION_TYPE_BUY)
-        {
-
-         if(_sl_actual >= positionInfo.PriceOpen())
-            continue;
-
-         if(!((_simbolo.Bid() - positionInfo.PriceOpen()) >= _puntosActivacion2))
-            continue;
-
-         _sl_propuesto = _simbolo.NormalizePrice(
-                            positionInfo.PriceOpen() + _puntosAdicionales2
-                         );
-
-         if((_simbolo.Bid() - _sl_propuesto) <= (_simbolo.StopsLevel() * _simbolo.Point()))
-           {
-            /*
-                        Print(
-                           "\n",
-                           __FUNCTION__ +
-                           "\n(Bid - sl) <= StopsLevel" +
-                           "\nBid: " + DoubleToString(_simbolo.Bid(), _simbolo.Digits()) +
-                           "\nSL propuesto: " + DoubleToString(_sl_propuesto, _simbolo.Digits()) +
-
-                           "\nDistancia actual: " +
-                           IntegerToString(
-                           int((_simbolo.Bid() - _sl_propuesto) / _simbolo.Point())
-                           ) +
-
-                           "\nStopsLevel: " + IntegerToString(_simbolo.StopsLevel())
-                        );
-            */
-            continue;
+            break;
 
            }
 
-        }
+         positionInfo.StoreState();
 
-      if(positionInfo.PositionType() == POSITION_TYPE_SELL)
-        {
-
-         if(_sl_actual <= positionInfo.PriceOpen())
+         if(positionInfo.Symbol() != _simbolo.Name())
             continue;
 
-         if(!((positionInfo.PriceOpen() - _simbolo.Ask()) >= _puntosActivacion2))
+         if(positionInfo.Magic() != _magico)
             continue;
 
-         _sl_propuesto = _simbolo.NormalizePrice(
-                            positionInfo.PriceOpen() - _puntosAdicionales2
-                         );
+         _sl_actual = _simbolo.NormalizePrice(positionInfo.StopLoss());
 
-         if((_sl_propuesto - _simbolo.Ask()) <= (_simbolo.StopsLevel() * _simbolo.Point()))
+         _simbolo.RefreshRates();
+
+         if(positionInfo.PositionType() == POSITION_TYPE_BUY)
            {
-            /*
-                        Print(
-                           "\n",
-                           __FUNCTION__ +
-                           "\n(sl - Ask) <= StopsLevel" +
-                           "\nAsk: " + DoubleToString(_simbolo.Ask(), _simbolo.Digits()) +
-                           "\nSL propuesto: " + DoubleToString(_sl_propuesto, _simbolo.Digits()) +
 
-                           "\nDistancia actual: " +
-                           IntegerToString(
-                           int((_sl_propuesto - _simbolo.Ask()) / _simbolo.Point())
-                           ) +
+            if(_sl_actual >= positionInfo.PriceOpen())
+               continue;
 
-                           "\nStopsLevel: " + IntegerToString(_simbolo.StopsLevel())
-                        );
-            */
-            continue;
+            if(!((_simbolo.Bid() - positionInfo.PriceOpen()) >= _puntosActivacion2))
+               continue;
+
+            _sl_propuesto = _simbolo.NormalizePrice(
+                               positionInfo.PriceOpen() + _puntosAdicionales2
+                            );
+
+            if((_simbolo.Bid() - _sl_propuesto) <= (_simbolo.StopsLevel() * _simbolo.Point()))
+              {
+               /*
+                           Print(
+                              "\n",
+                              __FUNCTION__ +
+                              "\n(Bid - sl) <= StopsLevel" +
+                              "\nBid: " + DoubleToString(_simbolo.Bid(), _simbolo.Digits()) +
+                              "\nSL propuesto: " + DoubleToString(_sl_propuesto, _simbolo.Digits()) +
+
+                              "\nDistancia actual: " +
+                              IntegerToString(
+                              int((_simbolo.Bid() - _sl_propuesto) / _simbolo.Point())
+                              ) +
+
+                              "\nStopsLevel: " + IntegerToString(_simbolo.StopsLevel())
+                           );
+               */
+               continue;
+
+              }
 
            }
 
+         if(positionInfo.PositionType() == POSITION_TYPE_SELL)
+           {
+
+            if(_sl_actual <= positionInfo.PriceOpen())
+               continue;
+
+            if(!((positionInfo.PriceOpen() - _simbolo.Ask()) >= _puntosActivacion2))
+               continue;
+
+            _sl_propuesto = _simbolo.NormalizePrice(
+                               positionInfo.PriceOpen() - _puntosAdicionales2
+                            );
+
+            if((_sl_propuesto - _simbolo.Ask()) <= (_simbolo.StopsLevel() * _simbolo.Point()))
+              {
+               /*
+                           Print(
+                              "\n",
+                              __FUNCTION__ +
+                              "\n(sl - Ask) <= StopsLevel" +
+                              "\nAsk: " + DoubleToString(_simbolo.Ask(), _simbolo.Digits()) +
+                              "\nSL propuesto: " + DoubleToString(_sl_propuesto, _simbolo.Digits()) +
+
+                              "\nDistancia actual: " +
+                              IntegerToString(
+                              int((_sl_propuesto - _simbolo.Ask()) / _simbolo.Point())
+                              ) +
+
+                              "\nStopsLevel: " + IntegerToString(_simbolo.StopsLevel())
+                           );
+               */
+               continue;
+
+              }
+
+           }
+
+         if(_sl_actual == _sl_propuesto)
+            continue;
+
+         if(!VerificarPreEstado(_simbolo.Name(), _imprimirMensaje))
+            return false;
+
+         Print("");
+         if(!_orden.PositionModify(
+               positionInfo.Ticket(),
+               _sl_propuesto,
+               positionInfo.TakeProfit()
+            ))
+           {
+            Print("!_orden.PositionModify");
+            Print("Bid: " + DoubleToString(_simbolo.Bid(), _simbolo.Digits()));
+            Print("Ask: " + DoubleToString(_simbolo.Ask(), _simbolo.Digits()));
+            Print(EnumToString(positionInfo.PositionType()));
+            Print("open: " + DoubleToString(positionInfo.PriceOpen(), _simbolo.Digits()));
+            _orden.PrintRequest();
+            _orden.PrintResult();
+
+            _salida = false;
+           }
+
+         Print("");
+
         }
 
-      if(_sl_actual == _sl_propuesto)
-         continue;
-
-      if(!VerificarPreEstado(_simbolo.Name(), _imprimirMensaje))
+      if(_salida)
         {
-         _salida = false;
 
-         continue;
+         if(_imprimirMensaje)
+            Print("Pude hacer break even perfectamente.");
+
+         return true;
+
         }
 
-      Print("");
-      if(!_orden.PositionModify(
-            positionInfo.Ticket(),
-            _sl_propuesto,
-            positionInfo.TakeProfit()
-         ))
-        {
-         Print("!_orden.PositionModify");
-         Print("Bid: " + DoubleToString(_simbolo.Bid(), _simbolo.Digits()));
-         Print("Ask: " + DoubleToString(_simbolo.Ask(), _simbolo.Digits()));
-         Print(EnumToString(positionInfo.PositionType()));
-         Print("open: " + DoubleToString(positionInfo.PriceOpen(), _simbolo.Digits()));
-         _orden.PrintRequest();
-         _orden.PrintResult();
-
-         _salida = false;
-        }
-
-      Print("");
+      if(_imprimirMensaje)
+         Print("Voy a volver a intentar meter break even.");
 
      }
 
 //Print("");
 
-   return _salida;
   }
 
 
@@ -673,10 +689,15 @@ bool CerrarPosicionesPositivas(
 
         }
 
-
       if(_salida)
         {
-         Print("Pude cerrar " + IntegerToString(_cantPosiciones) + " las posiciones positivas.");
+
+         Print(
+            "Pude cerrar " +
+            IntegerToString(_cantPosiciones) +
+            " las posiciones positivas."
+         );
+
          return true;
         }
 
@@ -2066,114 +2087,6 @@ bool EnviarMensaje(
       );
 
    return true;
-  }
-
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-bool aplicarBE(
-   const string _simbolo,
-   const ulong _magico,
-   const ulong _deslizamiento,
-   const int _puntosBE,
-   const int _puntosAdicionales,
-   string& _mensaje
-)
-  {
-
-   if(_puntosBE == 0)
-      return true;
-
-   CSymbolInfo obj_simbolo;
-
-   if(!obj_simbolo.Name(_simbolo))
-     {
-      Print("!_simbolo.Name, " + __FUNCTION__);
-      return false;
-     }
-
-   CTrade _orden;
-
-   if(!_orden.SetTypeFillingBySymbol(obj_simbolo.Name()))
-     {
-      Print("!_orden.SetTypeFillingBySymbol, " + __FUNCTION__);
-      return false;
-     }
-
-   CPositionInfo positionInfo;
-
-   _orden.SetExpertMagicNumber(_magico);
-   _orden.SetDeviationInPoints(_deslizamiento);
-   _orden.SetMarginMode();
-
-   double _sl = -1;
-
-   obj_simbolo.RefreshRates();
-
-   for(int _cont = (PositionsTotal() - 1); _cont >= 0; _cont--)
-     {
-
-      if(!positionInfo.SelectByIndex(_cont))
-         continue;
-
-      positionInfo.StoreState();
-
-      if(positionInfo.Symbol() != _simbolo)
-         continue;
-
-      if(positionInfo.Magic() != _magico)
-         continue;
-
-      if(positionInfo.PositionType() == POSITION_TYPE_SELL)
-        {
-
-         if(positionInfo.StopLoss() <= positionInfo.PriceOpen())
-            continue;
-
-         if(!(obj_simbolo.Ask() <= (positionInfo.PriceOpen() - _puntosBE * obj_simbolo.Point())))
-            continue;
-
-         _sl = obj_simbolo.NormalizePrice(positionInfo.PriceOpen() - _puntosAdicionales * obj_simbolo.Point());
-
-        }
-
-      if(positionInfo.PositionType() == POSITION_TYPE_BUY)
-        {
-
-         if(positionInfo.StopLoss() >= positionInfo.PriceOpen())
-            continue;
-
-         if(!(obj_simbolo.Bid() >= (positionInfo.PriceOpen() + _puntosBE * obj_simbolo.Point())))
-            continue;
-
-         _sl = obj_simbolo.NormalizePrice(positionInfo.PriceOpen() + _puntosAdicionales * obj_simbolo.Point());
-
-        }
-
-      if(!_orden.PositionModify(
-            positionInfo.Ticket(),
-            _sl,
-            positionInfo.TakeProfit()
-         ))
-        {
-
-         Print("!OrderModify " + IntegerToString(_LastError));
-         _orden.PrintResult();
-         _orden.PrintRequest();
-
-         ExpertRemove();
-         return false;
-
-         if(!MQLInfoInteger(MQL_TESTER))
-            ResetLastError();
-
-        }
-
-     }
-
-   return true;
-
   }
 
 
