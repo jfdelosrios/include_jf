@@ -8,7 +8,14 @@
 #property version   "1.00"
 #property strict
 
+#ifdef __MQL4__
 #include "..\\Include_jf\\SymbolInfo.mqh"
+#endif
+
+
+#ifdef __MQL5__
+#include <Trade\SymbolInfo.mqh>
+#endif
 
 enum ENUM_OPERACION
   {
@@ -38,6 +45,8 @@ public:
       const string _simboloPrincipal,
       const ENUM_OPERACION _tipoOperacion
    );
+
+   bool              Create(const string _simboloPrincipal);
 
    bool              CalcularLoteUsandoFraccion(
       const ENUM_ORDER_TYPE _tipoPosicion,
@@ -90,6 +99,49 @@ bool C_calcularLote::Create(
      }
 
    i_tipoOperacion = _tipoOperacion;
+
+   if(DetectarSimboloPuente(
+         m_monedaCuenta,
+         m_simboloPrincipal,
+         m_simboloPuente
+      ))
+     {
+
+      if(m_simboloPuente.CurrencyProfit() == m_monedaCuenta)
+         i_tipoOperacion = division;
+
+      if(m_simboloPuente.CurrencyBase() == m_monedaCuenta)
+         i_tipoOperacion = multiplicacion;
+
+     }
+
+
+   return true;
+
+  }
+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool C_calcularLote::Create(const string _simboloPrincipal)
+  {
+
+   m_lote = -1;
+
+   if(!m_simboloPrincipal.Name(_simboloPrincipal))
+     {
+      Print("!m_simboloPrincipal.Name(_simboloPrincipal)");
+      return false;
+     }
+
+   m_monedaCuenta = AccountInfoString(ACCOUNT_CURRENCY);
+
+   if(m_monedaCuenta == "")
+     {
+      Print("Se desconoce moneda de la cuenta.");
+      return(false);
+     }
 
    if(DetectarSimboloPuente(
          m_monedaCuenta,
