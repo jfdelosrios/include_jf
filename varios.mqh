@@ -61,15 +61,25 @@ bool VerificarSiMercadoAbierto(const string _simbolo, bool &_salida1)
 
       C_FiltroRangoTiempo filtroMercado;
 
-      filtroMercado.set_Time_inicio(uchar(_time_from.hour), uchar(_time_from.min));
+      filtroMercado.set_Time_inicio(
+         uchar(_time_from.hour),
+         uchar(_time_from.min),
+         uchar(_time_from.sec)
+      );
 
       if((from < to) && (_time_to.hour == 0) && (_time_to.min == 0)) //puede ser desde las 23 hasta las 00
         {
-         filtroMercado.set_Time_fin(0, 0);
+         filtroMercado.set_Time_fin(0, 0, 0);
         }
       else
         {
-         filtroMercado.set_Time_fin(uchar(_time_to.hour), uchar(_time_to.min), 59);
+
+         filtroMercado.set_Time_fin(
+            uchar(_time_to.hour),
+            uchar(_time_to.min),
+            uchar(_time_to.sec)
+         );
+
         }
 
       if(!filtroMercado.EstaEntreRango(TimeCurrent(), _salida1))
@@ -88,7 +98,7 @@ bool VerificarSiMercadoAbierto(const string _simbolo, bool &_salida1)
 
 
 //+------------------------------------------------------------------+
-//|                                                                  |
+//| Se dispara si hay error                                          |
 //+------------------------------------------------------------------+
 bool detectarError(const string _funcion, const int _linea, const bool _remover)
   {
@@ -123,7 +133,7 @@ bool detectarError(const string _funcion, const int _linea, const bool _remover)
 bool fechaVencida()
   {
 
-   const datetime _fecha = D'2023.09.01';
+   const datetime _fecha = D'2023.12.01';
 
    if(TimeCurrent() >= _fecha)
      {
@@ -372,10 +382,14 @@ bool BreakEvenPuntos(
 
    const double _puntosAdicionales2 = _puntosAdicionales * _simbolo.Point();
 
+   bool hiceUnaModificacion = false;
+
    while(true)
      {
 
       _salida = true;
+
+      hiceUnaModificacion = false;
 
       for(int _cont = (PositionsTotal() - 1); _cont >= 0; _cont--)
         {
@@ -508,6 +522,8 @@ bool BreakEvenPuntos(
             _salida = false;
            }
 
+         hiceUnaModificacion = true;
+
          Print("");
 
         }
@@ -515,8 +531,11 @@ bool BreakEvenPuntos(
       if(_salida)
         {
 
-         if(_imprimirMensaje)
-            Print("Pude hacer break even perfectamente.");
+         if(hiceUnaModificacion)
+           {
+            if(_imprimirMensaje)
+               Print("Pude hacer break even perfectamente.");
+           }
 
          return true;
 
@@ -1716,6 +1735,166 @@ bool BorrarPendientes(
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
+bool BorrarPendientes(
+   const string _simbolo,
+   const ulong _magico,
+   const ulong _deslizamiento,
+   const bool _asincronico,
+   const ENUM_ORDER_TYPE _tipo,
+   const bool _imprimirMensaje
+)
+  {
+
+   if(!VerificarPreEstado(_simbolo, _imprimirMensaje))
+     {
+      detectarError(__FUNCTION__, __LINE__, true);
+      return false;
+     }
+
+   CTrade _orden;
+
+   if(!_orden.SetTypeFillingBySymbol(_simbolo))
+     {
+      Print("!_orden.SetTypeFillingBySymbol, " + __FUNCTION__);
+      return false;
+     }
+
+   _orden.SetAsyncMode(_asincronico);
+   _orden.SetMarginMode();
+   _orden.SetDeviationInPoints(_deslizamiento);
+   _orden.LogLevel(LOG_LEVEL_ALL);
+   _orden.SetExpertMagicNumber(_magico);
+
+   COrderInfo _orderInfo;
+
+   bool _salidaMercado;
+
+   bool _salida;
+
+   bool algunaAbierta;
+
+   while(true)
+     {
+
+      if(_imprimirMensaje)
+         Print("\nVoy a intentar borrar ordenes pendientes.");
+
+      algunaAbierta = false;
+
+      if(!VerificarSiMercadoAbierto(_simbolo, _salidaMercado))
+        {
+         Print("Fallo en !VerificarSiMercadoAbierto. " + __FUNCTION__);
+         return false;
+        }
+
+      if(!_salidaMercado)
+        {
+
+         if(_imprimirMensaje)
+            Print(
+               "No puedo Borrar Pendientes en " +
+               _simbolo +
+               ". Mercado cerrado."
+            );
+
+         return false;
+
+        }
+
+      _salida = true;
+
+      for(int _cont = (OrdersTotal() - 1); _cont >= 0; _cont--)
+        {
+
+         if(!_orderInfo.SelectByIndex(_cont))
+           {
+
+            _salida = false;
+
+            if(_LastError == ERR_TRADE_ORDER_NOT_FOUND)
+               Print("Orden " + IntegerToString(_cont) + " no encontrada.");
+            else
+               Print(__FUNCTION__ + ", error "+IntegerToString(_LastError));
+
+            if(MQLInfoInteger(MQL_TESTER))
+               return false;
+
+            ResetLastError();
+
+            break;
+
+           }
+
+         _orderInfo.StoreState();
+
+         if(_orderInfo.Symbol() != _simbolo)
+            continue;
+
+         if(_orderInfo.Magic() != _magico)
+            continue;
+
+         if(_orderInfo.OrderType() != _tipo)
+            continue;
+
+         algunaAbierta = true;
+
+         if(!_orden.OrderDelete(_orderInfo.Ticket()))
+           {
+
+            _salida = false;
+
+            if(_LastError == ERR_TRADE_SEND_FAILED)
+              {
+               ResetLastError();
+               continue;
+              }
+
+            Print("\n----");
+            Print("!_orden.OrderDelete ");
+            _orden.PrintResult();
+            _orden.PrintRequest();
+            Print("Error: " + IntegerToString(_LastError));
+            Print("----\n");
+
+            if(MQLInfoInteger(MQL_TESTER))
+               return false;
+
+            ResetLastError();
+
+            break;
+
+           }
+
+        }
+
+      if(_salida)
+        {
+
+         if(_imprimirMensaje)
+           {
+            if(algunaAbierta)
+              {
+               Print("Pude borrar todas las ordenes.\n");
+              }
+            else
+              {
+               Print("No encontré ninguna orden pendiente puesta.\n");
+              }
+           }
+
+         return true;
+        }
+
+      Print("\nVoy a volver a intentar borrar todas las pendientes.");
+
+     }
+
+  }
+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
 double get_BeneficioFlotante(const string _simbolo, const long _magico)
   {
 
@@ -1852,9 +2031,11 @@ string EnumTimeFrameToString(const ENUM_TIMEFRAMES _periodo)
 
 
 //+------------------------------------------------------------------+
-//| Despues de cierta cantidad de puntos se activa breakEven         |
+//| Despues de cierta cantidad de puntos se activa trailingStop      |
+//| Despues de activado el trailingStop, los stopLoss estarán maximo |
+//| a una distacia determinada en puntos.                            |
 //+------------------------------------------------------------------+
-bool trailingPuntos(
+bool trailingContinuoPuntos(
 
    // Sólo toca las posiciones que tengan este simbolo y este número magico
    const string _simboloString,
@@ -2520,88 +2701,51 @@ bool ultimoCierre(
 
 
 //+------------------------------------------------------------------+
-//| Posicion pertenece al EA                                         |
+//| Intenta cargar los atributos de una posición                     |
+//| desde un cierto ticket.                                          |
+//|                                                                  |
+//| Si la posicion esta relacionada con un cierto numero magico      |
+//| y un cierto simbolo, _pertenece será true                        |
 //+------------------------------------------------------------------+
-bool AbrioPosicionElEA(
-   const MqlTradeTransaction& trans,
+bool PosicionPerteneceAlEA(
+   const ulong _ticketPosicion,
    const string _simbolo,
-   const ulong _magico,
-   CPositionInfo &positionInfo
-)
-  {
-
-   if(!positionInfo.SelectByTicket(trans.position))
-     {
-
-      if(_LastError == ERR_TRADE_POSITION_NOT_FOUND)
-        {
-         ResetLastError();
-        }
-      else
-        {
-
-         Print(
-            "\nLinea: " + IntegerToString(__LINE__) + ", " +
-            ", funcion: " + __FUNCTION__ +
-            ", error: " + IntegerToString(_LastError) + ".\n   <:P"
-         );
-
-        }
-
-      return false;
-
-     }
-
-   positionInfo.StoreState();
-
-   if(positionInfo.Magic() != _magico)
-      return false;
-
-   if(positionInfo.Symbol() != _simbolo)
-      return false;
-
-   if(trans.price == 0)
-      return false;
-
-   return true;
-
-  }
-
-
-//+------------------------------------------------------------------+
-//| Posicion pertenece al EA                                         |
-//+------------------------------------------------------------------+
-bool PosicionPerteneceAl_EA_old(
-   const MqlTradeTransaction& trans,
-   const string _simbolo,
-   const ulong _magico,
+   const ulong _magico
+   CPositionInfo &positionInfo,
    bool & _pertenece
 )
   {
 
    _pertenece = false;
 
-   CPositionInfo positionInfo;
-
-   if(!positionInfo.SelectByTicket(trans.position))
+   if(!positionInfo.SelectByTicket(_ticketPosicion))
      {
 
       if(_LastError == ERR_TRADE_POSITION_NOT_FOUND)
         {
+
+         Print(
+            "\nError: ERR_TRADE_POSITION_NOT_FOUND",
+            "\nFuncion: ", __FUNCTION__,
+            ".\n"
+         );
+
          ResetLastError();
+
         }
       else
         {
 
          Print(
-            "\nLinea: " + IntegerToString(__LINE__) + ", " +
-            ", funcion: " + __FUNCTION__ +
-            ", error: " + IntegerToString(_LastError) + ".\n   <:P"
+            "\nError: ", IntegerToString(_LastError),
+            "\nFuncion: ", __FUNCTION__,
+            ".\n"
          );
 
         }
 
       return false;
+
      }
 
    positionInfo.StoreState();
@@ -2613,6 +2757,69 @@ bool PosicionPerteneceAl_EA_old(
       return true;
 
    _pertenece = true;
+
+   return true;
+
+  }
+
+
+//+------------------------------------------------------------------+
+//| Intenta establecer si se acabo de abrir una cierta posicion      |
+//| relacionada con un cierto numero mágico y un cierto simbolo      |
+//+------------------------------------------------------------------+
+bool AbrioPosicionElEA(
+   const MqlTradeTransaction& trans,
+   const string _simbolo,
+   const ulong _magico
+)
+  {
+
+     {
+      // esto es mio?
+      bool _pertenece;
+
+      CPositionInfo &positionInfo;
+
+      if(!PosicionPerteneceAl_EA(
+          trans.position, 
+          _simbolo, 
+          _magico, 
+          _pertenece, 
+          positionInfo
+        ))
+        {
+         return false;
+        }
+
+      if(!_pertenece)
+        {
+         return false;
+        }
+
+     }
+
+   if(trans.price == 0)
+      return true;
+
+//esta funcion no se usa en DealInfo, al parecer esta funcion es mejor para analizar cuando se tiene ya identificado el ticket del deal
+   if(!HistoryDealSelect(trans.deal))
+     {
+      Print("!HistoryDealSelect, " + __FUNCTION__);
+      return false;
+     }
+
+   long long_var ;
+
+   if(!HistoryDealGetInteger(trans.deal, DEAL_ENTRY, long_var))
+     {
+      Print("!HistoryDealGetInteger, " + __FUNCTION__);
+      return false;
+     }
+
+   if(ENUM_DEAL_ENTRY(long_var) != DEAL_ENTRY_IN)
+     {
+      return false;
+     }
 
    return true;
 
@@ -2839,22 +3046,18 @@ ulong ContarPosiciones(
   }
 
 
+// muy probablemente nos evitemos hacer este for usando HistoryDealSelect()
 //+------------------------------------------------------------------+
-//| detecta deals historicos, entre esos sl y tp                     |
+//| detecta si un deal pertenece a un determinado número magico      |
+//| y simbolo                                                        |
 //+------------------------------------------------------------------+
 bool DisparoDealHistorico(
-   const MqlTradeTransaction& trans,
+   const ulong _deal,
    const string _simbolo,
    const ulong _magico,
-   ENUM_DEAL_REASON &_salida
+   CDealInfo & _DealInfo
 )
   {
-
-   CDealInfo DealInfo;
-
-   long var;
-
-   int deals;
 
    if(!HistorySelect(0, TimeCurrent()))
      {
@@ -2862,34 +3065,31 @@ bool DisparoDealHistorico(
       return false;
      }
 
+   int _deals;
+
    while(true)
      {
 
-      deals = HistoryDealsTotal();
+      _deals = HistoryDealsTotal();
 
-      for(int i = 0; i < deals; i++)
+      for(int i = 0; i < _deals; i++)
         {
 
-         if(!DealInfo.SelectByIndex(i))
+         if(!_DealInfo.SelectByIndex(i))
            {
             Print("!DealInfo.SelectByIndex");
             Print("Voy a volver a intentar.");
             break;
            }
 
-         if(DealInfo.Ticket() != trans.deal)
+         if(_DealInfo.Ticket() != _deal)
             continue;
 
-         if(DealInfo.Symbol() != _simbolo)
+         if(_DealInfo.Symbol() != _simbolo)
             return false;
 
-         if(DealInfo.Magic() != _magico)
+         if(_DealInfo.Magic() != _magico)
             return false;
-
-         if(!DealInfo.InfoInteger(DEAL_REASON, var))
-            return false;
-
-         _salida = ENUM_DEAL_REASON(var);
 
          return true;
 
@@ -3014,7 +3214,7 @@ bool CerrarPosiciones(
             if(_LastError == ERR_TRADE_SEND_FAILED)
               {
                ResetLastError();
-               continue;
+               break;
               }
 
             Print("\n----");
@@ -3059,4 +3259,322 @@ bool CerrarPosiciones(
 
   }
 
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool IntentarPonerBuyStop(
+   const string _simboloString,
+   const ulong _magico,
+   const ulong _deslizamiento,
+   double _apertura,
+   double _sl,
+   double _tp,
+   const double _volumen,
+   const datetime _salidaInactividad // Salida por inactividad (fecha)
+)
+  {
+
+   CSymbolInfo _simbolo;
+
+   if(!_simbolo.Name(_simboloString))
+     {
+      Print("!_simbolo.Name, " + __FUNCTION__);
+      return false;
+     }
+
+   _apertura = _simbolo.NormalizePrice(_apertura);
+   _sl = _simbolo.NormalizePrice(_sl);
+   _tp = _simbolo.NormalizePrice(_tp);
+
+   _simbolo.RefreshRates();
+
+   if((_apertura - _simbolo.Ask()) <= (_simbolo.StopsLevel() * _simbolo.Point()))
+     {
+
+      Print(
+
+         "\nError en " + __FUNCTION__ + "\n" +
+         "(apertura - Ask) <= StopsLevel()" + "\n"
+         "Precio apertura: " + DoubleToString(_apertura, _simbolo.Digits()) +
+         "\n" +
+         "Precio Ask actual: " + DoubleToString(_simbolo.Ask(), _simbolo.Digits()) +
+         "\n" +
+         "Stop Level: " + IntegerToString(_simbolo.StopsLevel()) +
+         "\n"
+
+      );
+
+      return false;
+
+     }
+
+   if((_apertura - _sl) < (_simbolo.StopsLevel() * _simbolo.Point()))
+     {
+
+      Print(
+
+         "\nError en " + __FUNCTION__ + "\n" +
+         "(apertura - _sl) < StopsLevel()" + "\n" +
+         "Precio apertura: " + DoubleToString(_apertura, _simbolo.Digits()) +
+         "\n" +
+         "Precio Ask actual: " + DoubleToString(_simbolo.Ask(), _simbolo.Digits()) +
+         "\n" +
+         "Stop Level: " + IntegerToString(_simbolo.StopsLevel()) + "\n"
+
+      );
+
+      return false;
+
+     }
+
+   CTrade _orden;
+
+   if(!_orden.SetTypeFillingBySymbol(_simbolo.Name()))
+     {
+      Print("!orden.SetTypeFillingBySymbol");
+      return false;
+     }
+
+   _orden.SetExpertMagicNumber(_magico);
+   _orden.SetMarginMode();
+   _orden.SetDeviationInPoints(_deslizamiento);
+   _orden.LogLevel(LOG_LEVEL_ALL);
+
+   ENUM_ORDER_TYPE_TIME _type_time;
+   if(_salidaInactividad == 0)
+     {
+      _type_time=ORDER_TIME_GTC;
+     }
+   else
+     {
+      _type_time=ORDER_TIME_SPECIFIED;
+     }
+
+   if(!_orden.BuyStop(
+         _volumen,
+         _apertura,
+         _simbolo.Name(),
+         _sl,
+         _tp,
+         _type_time,
+         _salidaInactividad
+      ))
+     {
+
+      Print("\n----------");
+
+      Print("!orden.BuyStop " + IntegerToString(_LastError));
+      _orden.PrintRequest();
+      _orden.PrintResult();
+
+      Print(
+         "Precio Ask actual " + DoubleToString(_simbolo.Ask(), _simbolo.Digits()) +
+         "\n" +
+         "Precio Bid actual " + DoubleToString(_simbolo.Bid(), _simbolo.Digits())
+      );
+
+      Print("----------\n");
+
+      return false;
+
+     }
+
+   Print("Ticket " + IntegerToString(_orden.ResultOrder()) + "\n");
+
+   return true;
+
+  }
+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool IntentarPonerSellStop(
+   const string _simboloString,
+   const ulong _magico,
+   const ulong _deslizamiento,
+   double _apertura,
+   double _sl,
+   double _tp,
+   const double _volumen,
+   const datetime _salidaInactividad // Salida por inactividad (fecha)
+)
+  {
+
+   CSymbolInfo _simbolo;
+
+   if(!_simbolo.Name(_simboloString))
+     {
+      Print("!_simbolo.Name, " + __FUNCTION__);
+      return false;
+     }
+
+   _apertura = _simbolo.NormalizePrice(_apertura);
+   _sl = _simbolo.NormalizePrice(_sl);
+   _tp = _simbolo.NormalizePrice(_tp);
+
+   _simbolo.RefreshRates();
+
+   if((_simbolo.Bid() - _apertura) <= (_simbolo.StopsLevel() * _simbolo.Point()))
+     {
+
+      Print(
+
+         "\nError en " + __FUNCTION__ + "\n" +
+         "(Bid - apertura) <= StopsLevel" + "\n" +
+         "Precio Bid actual: " + DoubleToString(_simbolo.Bid(), _simbolo.Digits()) +
+         "\n" +
+         "Precio apertura: " + DoubleToString(_apertura, _simbolo.Digits()) +
+         "\n" +
+         "Stop Level: " + IntegerToString(_simbolo.StopsLevel())
+
+      );
+
+      return false;
+
+     }
+
+   if((_sl - _apertura) < (_simbolo.StopsLevel() * _simbolo.Point()))
+     {
+
+      Print(
+
+         "\nError en " + __FUNCTION__ + "\n" +
+         "(sl - apertura) < StopsLevel() " + "\n" +
+         "Precio apertura: " + DoubleToString(_apertura, _simbolo.Digits()) +
+         "\n" +
+         "Precio Ask actual: " + DoubleToString(_simbolo.Ask(), _simbolo.Digits()) +
+         "\n" +
+         "Stop Level: " + IntegerToString(_simbolo.StopsLevel()) + "\n"
+
+      );
+
+      return false;
+
+     }
+
+   CTrade _orden;
+
+   if(!_orden.SetTypeFillingBySymbol(_simbolo.Name()))
+     {
+      Print("!orden.SetTypeFillingBySymbol");
+      return false;
+     }
+
+   _orden.SetExpertMagicNumber(_magico);
+   _orden.SetMarginMode();
+   _orden.SetDeviationInPoints(_deslizamiento);
+   _orden.LogLevel(LOG_LEVEL_ALL);
+
+   ENUM_ORDER_TYPE_TIME _type_time;
+   if(_salidaInactividad == 0)
+     {
+      _type_time=ORDER_TIME_GTC;
+     }
+   else
+     {
+      _type_time=ORDER_TIME_SPECIFIED;
+     }
+
+   if(!_orden.SellStop(
+         _volumen,
+         _apertura,
+         _simbolo.Name(),
+         _sl,
+         _tp,
+         _type_time,
+         _salidaInactividad
+      ))
+     {
+
+      Print("");
+
+      Print("!orden.SellStop " + IntegerToString(_LastError));
+      _orden.PrintRequest();
+      _orden.PrintResult();
+
+      Print(
+         "Precio Ask actual " + DoubleToString(_simbolo.Ask(), _simbolo.Digits()) +
+         "\n" +
+         "Precio Bid actual " + DoubleToString(_simbolo.Bid(), _simbolo.Digits())
+      );
+
+      Print("");
+
+      return false;
+
+     }
+
+   Print("Ticket " + IntegerToString(_orden.ResultOrder()) + "\n");
+
+   return true;
+
+  }
+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool TocoStopLoss(
+   const ulong _deal,
+   const string _simbolo,
+   const ulong _magico
+)
+  {
+
+   CDealInfo _DealInfo;
+
+   if(_deal == 0)
+      return false;
+
+   if(!DisparoDealHistorico(_deal, _simbolo, _magico, _DealInfo))
+     {
+      detectarError(__FUNCTION__, __LINE__, true);
+      return false;
+     }
+
+   long _tipoDisparo;
+   if(!_DealInfo.InfoInteger(DEAL_REASON, _tipoDisparo))
+      return false;
+
+   if(ENUM_DEAL_REASON(_tipoDisparo) != DEAL_REASON_SL)
+      return false;
+
+   return true;
+
+  }
+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool TocoTakeProfit(
+   const ulong _deal,
+   const string _simbolo,
+   const ulong _magico
+)
+  {
+
+   CDealInfo _DealInfo;
+
+   if(_deal == 0)
+      return false;
+
+   if(!DisparoDealHistorico(_deal, _simbolo, _magico, _DealInfo))
+     {
+      detectarError(__FUNCTION__, __LINE__, true);
+      return false;
+     }
+
+   long _tipoDisparo;
+   if(!_DealInfo.InfoInteger(DEAL_REASON, _tipoDisparo))
+      return false;
+
+   if(ENUM_DEAL_REASON(_tipoDisparo) != DEAL_REASON_TP)
+      return false;
+
+   return true;
+
+  }
 //+------------------------------------------------------------------+
